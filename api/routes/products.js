@@ -1,49 +1,45 @@
 const express = require('express');
 const router = express.Router();
+const checkAuth = require('../middelware/check-auth');
+const ProductController = require('../controllers/ProductController');
+const multer = require('multer');
 
-router.get('/', (req, res, next) => {
-    res.status(200).json({
-        message: "Handling get request  to /product"
-    });
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, './uploads');
+    },
+    filename: function (req, file, cb) {
+        cb(null, new Date().toISOString().replace(/:/g, '-') + file.originalname);
+    }
+});
+const fileFilter = (req, file, cb) => {
+    if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png') {
+        cb(null, true);
+    } else {
+        //reject a file
+        cb(null, false);
+    }
+};
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 1024 * 1024 * 5 },
+    fileFilter: fileFilter
 });
 
-router.post('/', (req, res, next) => {
-    const product ={
-        name:req.body.name,
-        price:req.body.price
-    };
-    res.status(200).json({
-        message: "Handling Post request  to /product",
-        Product:product
-    });
-});
+//--find all
+router.get('/', ProductController.getAllProducts);
 
-    router.get('/:Id', (req, res, next) => {
-        const id = req.params.Id;
-        if (id === 'special') {
-            res.status(200).json({
-                message: "You discovered a special id",
-                id: id
-            });
-        }else {
-            res.status(200).json({
-                message: "Please pass an Id"
-            });
-        }
-    });
-    router.patch('/:productId', (req, res, next) => {
-        res.status(200).json({
-            message: " your Id is updated "
-        });
-    });
+//--find by id
+router.get('/:id', ProductController.getProductById);
+
+//--save
+router.post('/', checkAuth, upload.single('productImage'), ProductController.saveProduct);
 
 
-    router.delete('/:productId', (req, res, next) => {
-        res.status(200).json({
-            message: " deleted Product"
-        });
-    });
+//--update
+router.put('/:id', checkAuth, ProductController.updateProduct);
 
-
+//--delete
+router.delete('/:id', checkAuth, ProductController.deleteProduct);
 
 module.exports = router;
